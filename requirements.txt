@@ -1,0 +1,23 @@
+# Core dependencies - 核心相依套件
+numpy>=1.21.0
+
+# Optional dependencies for different embedding models
+# 可選相依套件 - 根據需要安裝的嵌入模型
+
+# For OpenAI embeddings - OpenAI 嵌入模型
+openai>=1.0.0
+
+# For SentenceBERT, BGE, M3E models - SentenceBERT, BGE, M3E 模型
+sentence-transformers>=2.0.0
+
+# For HuggingFace models - HuggingFace 模型
+transformers>=4.0.0
+torch>=1.9.0
+
+# Development dependencies - 開發相依套件
+pytest>=6.0.0
+pytest-cov>=2.0.0
+black>=21.0.0
+flake8>=3.9.0
+mypy>=0.900
+isort>=5.0.0

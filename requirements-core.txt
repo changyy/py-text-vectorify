@@ -1,0 +1,2 @@
+# Core dependencies only
+numpy>=1.21.0
