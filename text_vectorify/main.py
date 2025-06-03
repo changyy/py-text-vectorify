@@ -41,16 +41,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# Default models for each embedder type
-DEFAULT_MODELS = {
-    'OpenAIEmbedder': 'text-embedding-3-small',
-    'SentenceBertEmbedder': 'paraphrase-multilingual-MiniLM-L12-v2',
-    'BGEEmbedder': 'BAAI/bge-small-en-v1.5',
-    'M3EEmbedder': 'moka-ai/m3e-base',
-    'HuggingFaceEmbedder': 'sentence-transformers/all-MiniLM-L6-v2'
-}
-
-
 def parse_field_list(field_str: str) -> List[str]:
     """Parse comma-separated field string"""
     if not field_str:
@@ -337,8 +327,13 @@ def main():
     
     # Create embedder with custom parameters
     embedder_params = {'cache_dir': args.cache_dir}
+    
+    # Use provided model name (factory will handle defaults if None)
     if args.model_name:
         embedder_params['model_name'] = args.model_name
+        print(f"🤖 Using custom model: {args.model_name}", file=sys.stderr)
+    else:
+        print(f"🤖 Using default model for {args.process_method}", file=sys.stderr)
     
     # Handle extra data (like API keys)
     if args.extra_data:

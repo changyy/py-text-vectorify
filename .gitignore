@@ -210,6 +210,7 @@ small_test_data.jsonl
 dev_workflow_cache/
 workflow_cache/
 temp_cache/
+test_cache/
 cli_cache/
 library_cache/
 reports/
