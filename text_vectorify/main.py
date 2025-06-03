@@ -372,12 +372,26 @@ def main():
         if subtitle_fields:
             print(f"📝 Subtitle fields: {subtitle_fields}", file=sys.stderr)
         
-        result_count = vectorifier.vectorify_jsonl(
-            input_source=input_source,
-            main_fields=main_fields,
-            subtitle_fields=subtitle_fields,
-            output_file=args.output
-        )
+        # Choose appropriate processing method based on input source
+        if input_source == sys.stdin:
+            # Process from stdin
+            vectorifier.process_jsonl_from_stdin(
+                output_path=args.output,
+                input_field_main=main_fields,
+                input_field_subtitle=subtitle_fields
+            )
+            result_count = "unknown (stdin)"  # Can't count stdin records beforehand
+        else:
+            # Process from file
+            vectorifier.process_jsonl(
+                input_path=input_source,
+                output_path=args.output,
+                input_field_main=main_fields,
+                input_field_subtitle=subtitle_fields
+            )
+            # For file processing, we can count the lines
+            with open(input_source, 'r', encoding='utf-8') as f:
+                result_count = sum(1 for line in f if line.strip())
         
         print(f"✅ Successfully processed {result_count} records", file=sys.stderr)
         print(f"💾 Output saved to: {args.output}", file=sys.stderr)
