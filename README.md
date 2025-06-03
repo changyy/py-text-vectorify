@@ -1,6 +1,6 @@
 # text-vectorify
 
-[![PyPI version](https://badge.fury.io/py/text-vectorify.svg)](https://badge.fury.io/py/text-vectorify)
+[![PyPI version](https://img.shields.io/pypi/v/text-vectorify.svg)](https://pypi.org/project/text-vectorify)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI Downloads](https://static.pepy.tech/badge/text-vectorify)](https://pepy.tech/projects/text-vectorify)
