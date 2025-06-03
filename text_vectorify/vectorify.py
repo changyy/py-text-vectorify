@@ -17,7 +17,7 @@ class TextVectorify:
     def process_jsonl(self, input_path: str, output_path: str, 
                      input_field_main: List[str], 
                      input_field_subtitle: Optional[List[str]] = None,
-                     output_field: str = "vector"):
+                     output_field: str = "embedding"):
         """Process JSONL file"""
         input_path = Path(input_path)
         output_path = Path(output_path)
@@ -41,7 +41,7 @@ class TextVectorify:
     def process_jsonl_from_stdin(self, output_path: str,
                                 input_field_main: List[str], 
                                 input_field_subtitle: Optional[List[str]] = None,
-                                output_field: str = "vector"):
+                                output_field: str = "embedding"):
         """Process JSONL data from stdin"""
         output_path = Path(output_path)
         
@@ -58,7 +58,7 @@ class TextVectorify:
     def _process_jsonl_stream(self, infile: TextIO, outfile: TextIO, 
                              input_field_main: List[str], 
                              input_field_subtitle: Optional[List[str]] = None,
-                             output_field: str = "vector") -> int:
+                             output_field: str = "embedding") -> int:
         """Process JSONL data from a stream (file or stdin)"""
         processed_count = 0
         

@@ -123,6 +123,9 @@ Examples:
                        help='Create demo data and show example commands')
     parser.add_argument('--extra-data',
                        help='Extra data like API keys (for OpenAI embedder)')
+    parser.add_argument('--output-field',
+                       help='Output field name for embeddings (default: "embedding")',
+                       default='embedding')
     
     return parser
 
@@ -378,7 +381,8 @@ def main():
             vectorifier.process_jsonl_from_stdin(
                 output_path=args.output,
                 input_field_main=main_fields,
-                input_field_subtitle=subtitle_fields
+                input_field_subtitle=subtitle_fields,
+                output_field=args.output_field
             )
             result_count = "unknown (stdin)"  # Can't count stdin records beforehand
         else:
@@ -387,7 +391,8 @@ def main():
                 input_path=input_source,
                 output_path=args.output,
                 input_field_main=main_fields,
-                input_field_subtitle=subtitle_fields
+                input_field_subtitle=subtitle_fields,
+                output_field=args.output_field
             )
             # For file processing, we can count the lines
             with open(input_source, 'r', encoding='utf-8') as f:

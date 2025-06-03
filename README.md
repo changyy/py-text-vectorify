@@ -145,7 +145,7 @@ text-vectorify [OPTIONS]
 - `--process-model-name`: Model name to use (optional, will use defaults if not specified)
 - `--input-field-subtitle`: Additional text fields (comma-separated)
 - `--process-extra-data`: Extra data like API keys
-- `--output-field`: Output vector field name (default: "vector")
+- `--output-field`: Output embedding field name (default: "embedding")
 - `--output-cache-dir`: Cache directory (default: "./cache")
 - `--output`: Output file path (default: auto-generated)
 
@@ -186,8 +186,8 @@ JSONL file with text data:
 JSONL file with added vector embeddings:
 
 ```json
-{"title": "Sample Article", "content": "This is the content...", "author": "John Doe", "vector": [0.1, 0.2, 0.3, ...]}
-{"title": "Another Article", "content": "More content here...", "author": "Jane Smith", "vector": [0.4, 0.5, 0.6, ...]}
+{"title": "Sample Article", "content": "This is the content...", "author": "John Doe", "embedding": [0.1, 0.2, 0.3, ...]}
+{"title": "Another Article", "content": "More content here...", "author": "Jane Smith", "embedding": [0.4, 0.5, 0.6, ...]}
 ```
 
 ## 🤖 Supported Models
@@ -807,7 +807,7 @@ vectorizer.process_jsonl(
     output_path="output.jsonl",
     input_field_main=["title"],
     input_field_subtitle=["content"],
-    output_field="vector"
+    output_field="embedding"
 )
 ```
 

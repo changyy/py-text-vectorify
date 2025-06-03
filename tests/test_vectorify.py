@@ -209,7 +209,7 @@ class TestTextVectorify(unittest.TestCase):
                 input_path="/nonexistent/file.jsonl",
                 output_path=os.path.join(self.temp_dir, "output.jsonl"),
                 input_field_main=["title"],
-                output_field="vector"
+                output_field="embedding"
             )
     
     def test_empty_fields(self):

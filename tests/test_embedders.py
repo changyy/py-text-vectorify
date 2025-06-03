@@ -202,10 +202,14 @@ class TestEmbedders(unittest.TestCase):
             # First encoding
             vector1 = embedder.encode(test_text)
             
-            # Check if cache file is created
-            cache_key = embedder.get_cache_key(test_text)
-            cache_file = Path(self.cache_dir) / f"{cache_key}.pkl"
+            # Check if cache file is created (JSON format, not per-key)
+            cache_file = embedder.cache_file
             self.assertTrue(cache_file.exists())
+            self.assertTrue(cache_file.name.endswith("_cache.json"))
+            
+            # Check if the specific cache key exists in the cache
+            cache_key = embedder.get_cache_key(test_text)
+            self.assertIn(cache_key, embedder.cache)
             
             # Second encoding (should read from cache)
             vector2 = embedder.encode(test_text)
