@@ -1,5 +1,5 @@
 # embedders package
-from .base import BaseEmbedder
+from .base import BaseEmbedder, CacheManager
 from .openai import OpenAIEmbedder
 from .sentence_bert import SentenceBertEmbedder
 from .bge import BGEEmbedder
@@ -8,6 +8,7 @@ from .huggingface import HuggingFaceEmbedder
 
 __all__ = [
     "BaseEmbedder",
+    "CacheManager",
     "OpenAIEmbedder", 
     "SentenceBertEmbedder",
     "BGEEmbedder",

@@ -180,50 +180,62 @@ def example_4_multiple_fields():
 
 
 def example_5_command_line_usage():
-    """Example 5: Command line usage demonstration"""
+    """Example 5: Command line usage demonstration (Updated CLI)"""
     print("\n" + "=" * 60)
-    print("Example 5: Command line usage")
+    print("Example 5: Modern CLI usage (Unified Interface)")
     print("=" * 60)
     
-    print("Here are various command line usage examples:")
+    print("🚀 Using the unified CLI interface:")
     print()
     
-    print("1. Using SentenceBERT:")
-    print("text-vectorify \\")
+    print("1. Quick BGE testing with cache:")
+    print("python -m text_vectorify.main \\")
     print("  --input examples/sample_input.jsonl \\")
-    print("  --input-field-main 'title' \\")
-    print("  --input-field-subtitle 'content' \\")
-    print("  --process-method 'SentenceBertEmbedder' \\")
-    print("  --process-model-name 'paraphrase-multilingual-MiniLM-L12-v2'")
+    print("  --input-field-main title \\")
+    print("  --input-field-subtitle content \\")
+    print("  --process-method BGEEmbedder \\")
+    print("  --cache-dir ./quick_test_cache")
     print()
     
-    print("2. Using OpenAI API:")
-    print("text-vectorify \\")
+    print("2. OpenAI with custom cache location:")
+    print("python -m text_vectorify.main \\")
     print("  --input examples/sample_input.jsonl \\")
-    print("  --input-field-main 'title' \\")
-    print("  --input-field-subtitle 'content' \\")
-    print("  --process-method 'OpenAIEmbedder' \\")
-    print("  --process-model-name 'text-embedding-3-small' \\")
-    print("  --process-extra-data 'your-openai-api-key'")
+    print("  --input-field-main title \\")
+    print("  --input-field-subtitle content \\")
+    print("  --process-method OpenAIEmbedder \\")
+    print("  --model-name text-embedding-3-small \\")
+    print("  --extra-data $OPENAI_API_KEY \\")
+    print("  --cache-dir ./openai_cache")
     print()
     
-    print("3. Using BGE Chinese model:")
-    print("text-vectorify \\")
+    print("3. SentenceBERT multilingual:")
+    print("python -m text_vectorify.main \\")
     print("  --input examples/sample_input.jsonl \\")
-    print("  --input-field-main 'title' \\")
-    print("  --input-field-subtitle 'content' \\")
-    print("  --process-method 'BGEEmbedder' \\")
-    print("  --process-model-name 'BAAI/bge-base-zh-v1.5'")
+    print("  --input-field-main title \\")
+    print("  --input-field-subtitle content \\")
+    print("  --process-method SentenceBertEmbedder \\")
+    print("  --model-name paraphrase-multilingual-MiniLM-L12-v2 \\")
+    print("  --cache-dir ./sbert_cache")
     print()
     
-    print("4. Multiple fields combination:")
-    print("text-vectorify \\")
-    print("  --input examples/sample_input.jsonl \\")
-    print("  --input-field-main 'title,author' \\")
-    print("  --input-field-subtitle 'content,category' \\")
-    print("  --process-method 'M3EEmbedder' \\")
-    print("  --process-model-name 'moka-ai/m3e-base' \\")
-    print("  --output-field 'text_embedding'")
+    print("4. 🛠️  Utility commands:")
+    print("# Demo with sample data")
+    print("python -m text_vectorify.main --demo")
+    print()
+    print("# Check cache statistics")
+    print("python -m text_vectorify.main --show-cache-stats")
+    print()
+    print("# List cache files")
+    print("python -m text_vectorify.main --list-cache-files")
+    print()
+    print("# Clear all caches")
+    print("python -m text_vectorify.main --clear-all-caches")
+    
+    print("\n💡 CLI-First Development Benefits:")
+    print("  ✅ Quick experimentation with small datasets")
+    print("  ✅ Cache building for library reuse")
+    print("  ✅ Easy parameter tuning")
+    print("  ✅ Immediate result verification")
 
 
 def list_available_embedders():
@@ -244,6 +256,72 @@ def list_available_embedders():
     print("- HuggingFaceEmbedder: Open source, can use any HF model")
 
 
+def example_6_cli_library_workflow():
+    """Example 6: CLI-first → Library integration workflow"""
+    print("\n" + "=" * 60)
+    print("Example 6: CLI-first → Library Integration Workflow")
+    print("=" * 60)
+    
+    print("🔄 Recommended development workflow:")
+    print()
+    
+    print("STEP 1: 🔬 Start with CLI for quick testing")
+    print("-" * 50)
+    print("# Create small test dataset and run CLI")
+    print("python -m text_vectorify.main \\")
+    print("  --input examples/sample_input.jsonl \\")
+    print("  --input-field-main title \\")
+    print("  --process-method BGEEmbedder \\")
+    print("  --cache-dir ./workflow_cache \\")
+    print("  --output ./test_output.jsonl")
+    print()
+    
+    print("STEP 2: 🔍 Verify results and iterate")
+    print("-" * 50)
+    print("# Check cache stats")
+    print("python -m text_vectorify.main --show-cache-stats")
+    print("# Inspect output file")
+    print("head -3 test_output.jsonl")
+    print()
+    
+    print("STEP 3: 🔗 Switch to library with cache reuse")
+    print("-" * 50)
+    
+    # Demonstrate library integration
+    try:
+        # Sample data for demonstration
+        sample_data = [
+            {"title": "Test Document", "content": "Sample content for testing"},
+            {"title": "Another Doc", "content": "More test content"}
+        ]
+        
+        print("# Python library code:")
+        print("""
+from text_vectorify import EmbedderFactory
+
+# Reuse cache from CLI experiments
+embedder = EmbedderFactory.create_embedder(
+    "BGEEmbedder",
+    cache_dir="./workflow_cache"  # Same as CLI!
+)
+
+# Process data in memory (no files needed)
+for item in your_data:
+    text = f"{item['title']} {item['content']}"
+    vector = embedder.encode(text)  # Uses cache - no recomputation!
+    item['embedding'] = vector
+        """)
+        
+        print("\n💡 Key Benefits:")
+        print("  ✅ CLI: Fast iteration, easy debugging")
+        print("  ✅ Cache: No duplicate computations")
+        print("  ✅ Library: Seamless integration")
+        print("  ✅ Workflow: Develop → Test → Scale")
+        
+    except Exception as e:
+        print(f"Demo note: {e}")
+
+
 def main():
     """Main program"""
     print("🚀 Text Vectorify Usage Examples")
@@ -258,10 +336,14 @@ def main():
     example_3_bge()
     example_2_openai()  # Requires API Key
     example_5_command_line_usage()
+    example_6_cli_library_workflow()  # New workflow example
     
     print("\n" + "=" * 60)
     print("🎉 All examples completed!")
     print("Please check the output files in the examples/ directory")
+    print("\n💡 Next steps:")
+    print("  1. Try: python examples/development_workflow_guide.py")
+    print("  2. For CLI-first workflow demonstration")
     print("=" * 60)
 
 

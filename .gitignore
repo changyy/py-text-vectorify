@@ -198,3 +198,18 @@ cython_debug/
 *.swp
 *.*.swp
 cache/
+
+# Demo files and temporary outputs
+demo_data.jsonl
+*_demo_data.jsonl
+*_vectorized_*.jsonl
+workflow_demo_data.jsonl
+small_test_data.jsonl
+
+# Development workflow cache directories
+dev_workflow_cache/
+workflow_cache/
+temp_cache/
+cli_cache/
+library_cache/
+reports/

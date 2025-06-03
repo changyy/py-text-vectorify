@@ -4,10 +4,11 @@ Text Vectorify CLI - Text vectorization command-line tool
 
 Features:
 - Support for multiple embedding models (OpenAI, SentenceBERT, BGE, M3E, HuggingFace)
-- Intelligent caching mechanism
+- Intelligent caching mechanism with algorithm-specific cache keys
 - Flexible field combination
 - JSONL format processing
 - Support for stdin input and default model names
+- Automatic output filename generation with timestamps
 """
 
 import argparse
@@ -17,17 +18,20 @@ import os
 import tempfile
 from pathlib import Path
 from typing import List, Optional
+from datetime import datetime
 
 # Handle imports
 try:
     from .vectorify import TextVectorify
     from .factory import EmbedderFactory
+    from .embedders.base import CacheManager
 except ImportError:
     # Handle direct execution case
     current_dir = Path(__file__).parent.absolute()
     sys.path.insert(0, str(current_dir))
     from vectorify import TextVectorify
     from factory import EmbedderFactory
+    from embedders.base import CacheManager
 
 # Setup logging
 logging.basicConfig(
@@ -54,252 +58,344 @@ def parse_field_list(field_str: str) -> List[str]:
     return [field.strip() for field in field_str.split(',') if field.strip()]
 
 
-def create_embedder(method: str, model_name: str, extra_data: Optional[str] = None, 
-                   cache_dir: str = "./cache"):
-    """Create embedder based on parameters"""
-    kwargs = {'cache_dir': cache_dir}
+def _generate_default_output_filename(method_name: str, input_filename: Optional[str] = None) -> str:
+    """
+    Generate default output filename with timestamp and algorithm name
+    Format: output_{algorithm}_{timestamp}.jsonl or {input_base}_{algorithm}_{timestamp}.jsonl
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    algorithm_name = method_name.lower().replace('embedder', '')
     
-    # Handle extra data (like API Key)
-    if extra_data:
-        if method == "OpenAIEmbedder":
-            kwargs['api_key'] = extra_data
-        else:
-            # Can add extra parameters for other models as needed
-            pass
+    # If input filename is provided, use its base name
+    if input_filename and input_filename != '-' and input_filename:
+        base_name = Path(input_filename).stem
+        filename = f"{base_name}_vectorized_{algorithm_name}_{timestamp}.jsonl"
+    else:
+        filename = f"output_vectorized_{algorithm_name}_{timestamp}.jsonl"
     
-    return EmbedderFactory.create_embedder(method, model_name, **kwargs)
+    # Ensure output file is in current working directory
+    return str(Path.cwd() / filename)
 
 
-def generate_output_path(input_path: Optional[str] = None, suffix: str = "_vectorized") -> str:
-    """Generate output path based on input path or create temp file for stdin"""
-    if input_path is None or input_path == "-":
-        # Create temporary file for stdin input
-        temp_dir = Path(tempfile.gettempdir())
-        output_path = temp_dir / f"vectorify_output{suffix}.jsonl"
-        return str(output_path)
-    
-    input_path = Path(input_path)
-    output_path = input_path.parent / f"{input_path.stem}{suffix}{input_path.suffix}"
-    return str(output_path)
-
-
-def read_from_stdin() -> str:
-    """Read JSONL data from stdin and save to temporary file"""
-    temp_dir = Path(tempfile.gettempdir())
-    temp_file = temp_dir / "vectorify_stdin_input.jsonl"
-    
-    try:
-        with open(temp_file, 'w', encoding='utf-8') as f:
-            for line in sys.stdin:
-                f.write(line)
-        return str(temp_file)
-    except KeyboardInterrupt:
-        logger.info("Input reading interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"Error reading from stdin: {e}")
-        sys.exit(1)
-
-
-def main():
+def _setup_argument_parser() -> argparse.ArgumentParser:
+    """Setup command line argument parser with improved options"""
     parser = argparse.ArgumentParser(
-        description="Text vectorization tool - Support for multiple embedding models and intelligent caching",
+        description='Text Vectorify - Convert text data to vector embeddings',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Usage Examples:
-  # Using OpenAI embedding (with default model)
-  %(prog)s --input data.jsonl --input-field-main "title" --input-field-subtitle "content" \\
-           --process-method "OpenAIEmbedder" --process-extra-data "your-openai-api-key"
-           
-  # Using stdin input with BGE model (with default model)
-  cat data.jsonl | %(prog)s --input-field-main "title,content" \\
-                           --process-method "BGEEmbedder"
-
-  # Using SentenceBERT with custom model
-  %(prog)s --input multilingual.jsonl --input-field-main "title" --input-field-subtitle "description,tags" \\
-           --process-method "SentenceBertEmbedder" --process-model-name "paraphrase-multilingual-MiniLM-L12-v2"
-           
-  # Using stdin with explicit stdin marker
-  %(prog)s --input - --input-field-main "title" \\
-           --process-method "M3EEmbedder"
-
-Supported embedders (with default models):
-  - OpenAIEmbedder: OpenAI commercial API models (default: text-embedding-3-small)
-  - SentenceBertEmbedder: SentenceBERT multilingual models (default: paraphrase-multilingual-MiniLM-L12-v2)
-  - BGEEmbedder: Beijing Academy of AI BGE models (default: BAAI/bge-small-en-v1.5)
-  - M3EEmbedder: Moka M3E Chinese specialized models (default: moka-ai/m3e-base)
-  - HuggingFaceEmbedder: HuggingFace general models (default: sentence-transformers/all-MiniLM-L6-v2)
+Examples:
+  # Basic usage with file input
+  text-vectorify --input data.jsonl --input-field-main "title" --process-method "BGEEmbedder"
+  
+  # With custom output filename
+  text-vectorify --input data.jsonl --input-field-main "title" --process-method "BGEEmbedder" --output results.jsonl
+  
+  # Using stdin input
+  cat data.jsonl | text-vectorify --input-field-main "title" --process-method "OpenAIEmbedder"
+  
+  # Cache Management:
+  text-vectorify --show-cache-stats           # Show cache statistics
+  text-vectorify --list-cache-files           # List all cache files with details
+  text-vectorify --clear-all-caches           # Clear all caches (with confirmation)
+  
+  # Demo and learning:
+  text-vectorify --demo                       # Create demo data and show examples
+  
+  # Advanced usage:
+  text-vectorify --input data.jsonl --input-field-main "title" --clear-cache --process-method "BGEEmbedder"
         """
     )
     
-    # Required parameters
-    parser.add_argument(
-        '--input', 
-        type=str, 
-        help='Input JSONL file path (use "-" for stdin, or omit to read from stdin)'
-    )
+    parser.add_argument('--input', '-i', 
+                       help='Input JSONL file path (use "-" for stdin)')
+    parser.add_argument('--output', '-o', 
+                       help='Output JSONL file path (auto-generated with timestamp if not specified)')
+    parser.add_argument('--input-field-main', 
+                       help='Main field name to extract from input records')
+    parser.add_argument('--input-field-subtitle', 
+                       help='Optional subtitle field name to combine with main field')
+    parser.add_argument('--process-method',
+                       choices=['OpenAIEmbedder', 'SentenceBertEmbedder', 'BGEEmbedder', 'M3EEmbedder', 'HuggingFaceEmbedder'],
+                       help='Embedding method to use')
+    parser.add_argument('--model-name',
+                       help='Custom model name (overrides default for chosen method)')
+    parser.add_argument('--cache-dir',
+                       help='Custom cache directory path', default='./cache')
+    parser.add_argument('--clear-cache', action='store_true',
+                       help='Clear cache for the selected algorithm before processing')
+    parser.add_argument('--clear-all-caches', action='store_true',
+                       help='Clear all caches and exit')
+    parser.add_argument('--show-cache-stats', action='store_true',
+                       help='Show cache statistics and exit')
+    parser.add_argument('--list-cache-files', action='store_true',
+                       help='List all cache files and exit')
+    parser.add_argument('--demo', action='store_true',
+                       help='Create demo data and show example commands')
+    parser.add_argument('--extra-data',
+                       help='Extra data like API keys (for OpenAI embedder)')
     
-    parser.add_argument(
-        '--input-field-main', 
-        type=str, 
-        required=True,
-        help='Main text fields (comma-separated), e.g.: "title" or "title,header"'
-    )
+    return parser
+
+
+def _create_demo_data_and_show_examples():
+    """Create demo data and show example commands"""
+    import json
+    import tempfile
+    import os
     
-    parser.add_argument(
-        '--process-method', 
-        type=str, 
-        required=True,
-        choices=['OpenAIEmbedder', 'SentenceBertEmbedder', 'BGEEmbedder', 'M3EEmbedder', 'HuggingFaceEmbedder'],
-        help='Choose embedding method'
-    )
+    demo_data = [
+        {
+            "id": 1,
+            "title": "人工智慧基礎",
+            "content": "介紹機器學習和深度學習的基本概念",
+            "category": "AI"
+        },
+        {
+            "id": 2, 
+            "title": "自然語言處理",
+            "content": "文本分析、情感分析和語言模型",
+            "category": "NLP"
+        },
+        {
+            "id": 3,
+            "title": "電腦視覺",
+            "content": "影像辨識、物件檢測和圖像生成",
+            "category": "CV"
+        }
+    ]
     
-    parser.add_argument(
-        '--process-model-name', 
-        type=str, 
-        help='Model name (optional, will use defaults if not specified). Examples: "text-embedding-3-small", "BAAI/bge-base-zh-v1.5"'
-    )
-    
-    # Optional parameters
-    parser.add_argument(
-        '--input-field-subtitle', 
-        type=str,
-        help='Subtitle text fields (comma-separated), e.g.: "content,description"'
-    )
-    
-    parser.add_argument(
-        '--process-extra-data', 
-        type=str,
-        help='Extra data, such as OpenAI API Key'
-    )
-    
-    parser.add_argument(
-        '--output-field', 
-        type=str, 
-        default='vector',
-        help='Output vector field name (default: vector)'
-    )
-    
-    parser.add_argument(
-        '--output-cache-dir', 
-        type=str, 
-        default='./cache',
-        help='Cache directory path (default: ./cache)'
-    )
-    
-    parser.add_argument(
-        '--output', 
-        type=str,
-        help='Output file path (default: auto-generated)'
-    )
-    
-    parser.add_argument(
-        '--verbose', '-v', 
-        action='store_true',
-        help='Verbose output mode'
-    )
-    
-    args = parser.parse_args()
-    
-    # Set log level
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
-    # Handle input source (file, stdin, or explicit stdin marker)
-    use_stdin = False
-    input_path = args.input
-    
-    if input_path is None or input_path == "-":
-        use_stdin = True
-        if sys.stdin.isatty():
-            logger.error("No input file specified and stdin is empty. Please provide input via --input or pipe data to stdin.")
-            sys.exit(1)
-        logger.info("Reading input from stdin...")
-        # For stdin, we'll process directly without creating temp file
+    # 檢查當前目錄是否已有 demo_data.jsonl
+    current_demo = Path("demo_data.jsonl")
+    if current_demo.exists():
+        print("⚠️  Found existing demo_data.jsonl in current directory")
+        response = input("Create new demo file? (y/N): ").strip().lower()
+        if response not in ['y', 'yes']:
+            demo_file = current_demo
+            print(f"📄 Using existing demo data: {demo_file}")
+        else:
+            # 創建臨時檔案
+            with tempfile.NamedTemporaryFile(mode='w', suffix='_demo_data.jsonl', 
+                                           delete=False, encoding='utf-8') as f:
+                for item in demo_data:
+                    f.write(json.dumps(item, ensure_ascii=False) + '\n')
+                demo_file = Path(f.name)
+            print(f"📄 Created temporary demo data: {demo_file}")
+            print(f"💡 File will be automatically cleaned up by system")
     else:
-        # Validate input file
-        input_path = Path(args.input)
-        if not input_path.exists():
-            logger.error(f"Input file does not exist: {input_path}")
-            sys.exit(1)
+        # 創建在當前目錄
+        with open(current_demo, 'w', encoding='utf-8') as f:
+            for item in demo_data:
+                f.write(json.dumps(item, ensure_ascii=False) + '\n')
+        demo_file = current_demo
+        print(f"📄 Created demo data: {demo_file}")
+    
+    print("🚀 Text Vectorify Demo")
+    print("=" * 50)
+    print(f"📄 Created demo data: {demo_file}")
+    print(f"\n📋 Example Commands:")
+    print()
+    
+    print("1️⃣  Show current cache status:")
+    print("   python -m text_vectorify.main --show-cache-stats")
+    print()
+    
+    print("2️⃣  Process with BGE embedder (auto output filename):")
+    print(f"   python -m text_vectorify.main \\")
+    print(f"     --input {demo_file} \\")
+    print(f"     --input-field-main title \\")
+    print(f"     --input-field-subtitle content \\")
+    print(f"     --process-method BGEEmbedder \\")
+    print(f"     --show-cache-stats")
+    print()
+    
+    print("3️⃣  List all cache files:")
+    print("   python -m text_vectorify.main --list-cache-files")
+    print()
+    
+    print("4️⃣  Test stdin input with timestamp output:")
+    print(f"   cat {demo_file} | python -m text_vectorify.main \\")
+    print(f"     --input-field-main title \\")
+    print(f"     --process-method BGEEmbedder")
+    print()
+    
+    print("5️⃣  Clear all caches:")
+    print("   python -m text_vectorify.main --clear-all-caches")
+    print()
+    
+    print("💡 Key Features:")
+    print("   ✅ Algorithm + Model + Text hash as cache key")
+    print("   ✅ Separate cache files per algorithm/model")
+    print("   ✅ Auto-generated output files with timestamps")
+    print("   ✅ Comprehensive cache management")
+    print("   ✅ Detailed cache statistics")
+
+
+def _show_enhanced_cache_stats(cache_dir: str):
+    """Show enhanced cache statistics with better formatting"""
+    stats = CacheManager.get_total_cache_size(cache_dir)
+    print("=== 📊 Cache Statistics ===")
+    print(f"📁 Cache Directory: {stats['cache_dir']}")
+    print(f"📄 Total Files: {stats['total_files']}")
+    print(f"💾 Total Size: {stats['total_size_bytes']:,} bytes")
+    if stats['total_size_bytes'] > 1024*1024:
+        print(f"         ({stats['total_size_bytes']/(1024*1024):.2f} MB)")
+    print(f"📊 Total Entries: {stats['total_entries']:,}")
+    print(f"🤖 Algorithms: {', '.join(stats['algorithms']) if stats['algorithms'] else 'None'}")
+
+
+def _show_enhanced_cache_files(cache_dir: str):
+    """Show enhanced cache file listing with better formatting"""
+    cache_files = CacheManager.list_cache_files(cache_dir)
+    print("=== 📋 Cache Files ===")
+    
+    if not cache_files:
+        print("No cache files found.")
+        return
         
-        if not input_path.suffix.lower() == '.jsonl':
-            logger.warning(f"Input file is not .jsonl format: {input_path}")
-    
-    # Use default model if not specified
-    model_name = args.process_model_name
-    if not model_name:
-        model_name = DEFAULT_MODELS.get(args.process_method)
-        if not model_name:
-            logger.error(f"No default model found for {args.process_method}")
-            sys.exit(1)
-        logger.info(f"Using default model for {args.process_method}: {model_name}")
-    
-    # Parse fields
-    main_fields = parse_field_list(args.input_field_main)
-    subtitle_fields = parse_field_list(args.input_field_subtitle) if args.input_field_subtitle else None
-    
-    if not main_fields:
-        logger.error("Must specify at least one main field")
-        sys.exit(1)
-    
-    # Generate output path
-    output_path = args.output or generate_output_path(args.input if not use_stdin else None)
-    
-    if use_stdin:
-        logger.info("Input source: stdin")
-    else:
-        logger.info(f"Input file: {input_path}")
-    logger.info(f"Output file: {output_path}")
-    logger.info(f"Main fields: {main_fields}")
-    if subtitle_fields:
-        logger.info(f"Subtitle fields: {subtitle_fields}")
-    logger.info(f"Embedding method: {args.process_method}")
-    logger.info(f"Model name: {model_name}")
-    logger.info(f"Cache directory: {args.output_cache_dir}")
+    for i, info in enumerate(cache_files, 1):
+        print(f"{i}. {Path(info['file']).name}")
+        
+        if 'error' in info:
+            print(f"   ❌ Error: {info['error']}")
+        else:
+            print(f"   🤖 Algorithm: {info['algorithm']}")
+            print(f"   📦 Model: {info['model']}")
+            print(f"   📊 Entries: {info['entry_count']:,}")
+            print(f"   💾 Size: {info['size_bytes']:,} bytes")
+            if info['size_bytes'] > 1024*1024:
+                print(f"        ({info['size_bytes']/(1024*1024):.2f} MB)")
+            print(f"   🕒 Last Modified: {info['last_modified']}")
+        print()
+
+
+def _clear_all_caches_with_confirmation(cache_dir: str):
+    """Clear all caches with user confirmation"""
+    print("=== 🗑️  Clear All Caches ===")
     
     try:
-        # Create embedder
-        logger.info("Creating embedder...")
-        embedder = create_embedder(
-            method=args.process_method,
-            model_name=model_name,
-            extra_data=args.process_extra_data,
-            cache_dir=args.output_cache_dir
+        response = input(f"Are you sure you want to clear all cache files in '{cache_dir}'? (y/N): ")
+        if response.lower() in ['y', 'yes']:
+            cleared_count = CacheManager.clear_all_caches(cache_dir)
+            print(f"✅ Cleared {cleared_count} cache files from {cache_dir}")
+        else:
+            print("❌ Operation cancelled")
+    except KeyboardInterrupt:
+        print("\n❌ Operation cancelled")
+
+
+def main():
+    """Main entry point for the text vectorification tool"""
+    parser = _setup_argument_parser()
+    args = parser.parse_args()
+    
+    # Handle demo mode
+    if args.demo:
+        _create_demo_data_and_show_examples()
+        return
+    
+    # Handle cache management operations first
+    if args.show_cache_stats or args.list_cache_files or args.clear_all_caches:
+        if args.show_cache_stats:
+            _show_enhanced_cache_stats(args.cache_dir)
+            
+        if args.list_cache_files:
+            _show_enhanced_cache_files(args.cache_dir)
+                    
+        if args.clear_all_caches:
+            _clear_all_caches_with_confirmation(args.cache_dir)
+            
+        # Exit after cache management operations
+        if not (args.input_field_main and args.process_method):
+            return
+    
+    # Validate required arguments for processing
+    if not args.input_field_main or not args.process_method:
+        parser.error("--input-field-main and --process-method are required for processing")
+    
+    # Handle input source
+    if args.input is None or args.input == '-':
+        # Read from stdin
+        input_source = sys.stdin
+        input_filename = None
+        print("📖 Reading from stdin...", file=sys.stderr)
+    else:
+        # Read from file
+        if not os.path.exists(args.input):
+            print(f"❌ Error: Input file '{args.input}' not found", file=sys.stderr)
+            sys.exit(1)
+        input_source = args.input
+        input_filename = args.input
+    
+    # Generate output filename if not provided
+    if not args.output:
+        args.output = _generate_default_output_filename(args.process_method, input_filename)
+        print(f"💾 Output will be saved to: {args.output}", file=sys.stderr)
+    else:
+        # Ensure output path is absolute or relative to current directory
+        if not os.path.isabs(args.output):
+            args.output = str(Path.cwd() / args.output)
+    
+    # Create embedder with custom parameters
+    embedder_params = {'cache_dir': args.cache_dir}
+    if args.model_name:
+        embedder_params['model_name'] = args.model_name
+    
+    # Handle extra data (like API keys)
+    if args.extra_data:
+        if args.process_method == "OpenAIEmbedder":
+            embedder_params['api_key'] = args.extra_data
+    
+    try:
+        embedder = EmbedderFactory.create_embedder(args.process_method, **embedder_params)
+    except Exception as e:
+        print(f"❌ Error creating embedder: {e}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Handle cache operations for specific algorithm
+    if args.clear_cache:
+        embedder.clear_cache()
+        print(f"🗑️  Cache cleared for {args.process_method}")
+    
+    # Show cache stats for this specific embedder
+    if args.show_cache_stats:
+        stats = embedder.get_cache_stats()
+        print(f"\n=== {args.process_method} Cache Statistics ===")
+        for key, value in stats.items():
+            print(f"  {key}: {value}")
+        print()
+    
+    # Initialize vectorifier
+    vectorifier = TextVectorify(embedder)
+    
+    # Process the data
+    try:
+        main_fields = parse_field_list(args.input_field_main)
+        subtitle_fields = parse_field_list(args.input_field_subtitle) if args.input_field_subtitle else None
+        
+        print(f"🚀 Starting vectorization with {args.process_method}...", file=sys.stderr)
+        print(f"📝 Main fields: {main_fields}", file=sys.stderr)
+        if subtitle_fields:
+            print(f"📝 Subtitle fields: {subtitle_fields}", file=sys.stderr)
+        
+        result_count = vectorifier.vectorify_jsonl(
+            input_source=input_source,
+            main_fields=main_fields,
+            subtitle_fields=subtitle_fields,
+            output_file=args.output
         )
         
-        # Create vectorizer
-        logger.info("Initializing vectorizer...")
-        vectorizer = TextVectorify(embedder)
+        print(f"✅ Successfully processed {result_count} records", file=sys.stderr)
+        print(f"💾 Output saved to: {args.output}", file=sys.stderr)
         
-        # Process file or stdin
-        logger.info("Starting processing...")
-        if use_stdin:
-            vectorizer.process_jsonl_from_stdin(
-                output_path=output_path,
-                input_field_main=main_fields,
-                input_field_subtitle=subtitle_fields,
-                output_field=args.output_field
-            )
-        else:
-            vectorizer.process_jsonl(
-                input_path=str(input_path),
-                output_path=output_path,
-                input_field_main=main_fields,
-                input_field_subtitle=subtitle_fields,
-                output_field=args.output_field
-            )
-        
-        logger.info(f"✅ Processing completed! Output file: {output_path}")
+        # Show final cache stats
+        final_stats = embedder.get_cache_stats()
+        print(f"📊 Final cache size: {final_stats['cache_size']} entries", file=sys.stderr)
         
     except KeyboardInterrupt:
-        logger.info("User interrupted processing")
+        print(f"\n⚠️  Processing interrupted by user", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        logger.error(f"Processing failed: {e}")
-        if args.verbose:
-            import traceback
-            logger.error(traceback.format_exc())
+        print(f"❌ Error during processing: {e}", file=sys.stderr)
         sys.exit(1)
 
 

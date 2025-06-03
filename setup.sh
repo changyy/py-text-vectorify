@@ -1,9 +1,21 @@
 #!/bin/bash
 # setup.sh - 自動設置 text-vectorify 開發環境
+# 
+# 🎯 用途：設置本地開發環境，適用於：
+#   - 想要貢獻代碼的開發者
+#   - 想要從源碼安裝的進階用戶
+#   - 需要修改或客製化功能的用戶
+#
+# 📦 一般用戶請使用: pip install text-vectorify
 
 set -e
 
 echo "🚀 設置 text-vectorify 開發環境..."
+echo ""
+echo "📌 用途說明："
+echo "   🔧 開發者：設置完整開發環境 (測試、格式化、型別檢查等)"
+echo "   📦 一般用戶：請使用 'pip install text-vectorify'"
+echo ""
 
 # 檢查 Python 版本
 python_version=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
@@ -59,12 +71,21 @@ case $choice in
 esac
 
 echo ""
-echo "✅ 安裝完成！"
+echo "✅ 開發環境設置完成！"
 echo ""
-echo "下一步："
+echo "🔧 開發者下一步："
 echo "1. 啟動虛擬環境: source venv/bin/activate"
-echo "2. 執行測試: python -m pytest tests/ -v"
+echo "2. 執行測試: python test_runner.py --quick 或 python -m pytest tests/ -v"
 echo "3. 查看幫助: text-vectorify --help"
 echo ""
-echo "範例命令:"
+echo "📋 測試命令："
+echo "python test_runner.py --quick    # 快速測試"
+echo "python test_runner.py --coverage # 測試覆蓋率"
+echo "python -m pytest tests/ -v       # 直接使用 pytest"
+echo ""
+echo "📦 一般用戶安裝方式："
+echo "pip install text-vectorify       # 從 PyPI 安裝"
+echo "pip install 'text-vectorify[all]' # 安裝所有功能"
+echo ""
+echo "💻 CLI 範例命令:"
 echo "text-vectorify --input examples/sample_input.jsonl --input-field-main \"title\" --process-method \"SentenceBertEmbedder\" --process-model-name \"paraphrase-multilingual-MiniLM-L12-v2\""
