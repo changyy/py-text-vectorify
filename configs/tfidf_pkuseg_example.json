@@ -1,0 +1,15 @@
+{
+    "embedder_type": "TFIDFEmbedder",
+    "config": {
+        "max_features": 2000,
+        "ngram_range": [
+            1,
+            2
+        ],
+        "chinese_tokenizer": "pkuseg",
+        "stop_words": null,
+        "min_df": 1,
+        "max_df": 1.0,
+        "analyzer": "word"
+    }
+}

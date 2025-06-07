@@ -1,0 +1,31 @@
+{
+    "embedder_type": "MultiLayerEmbedder",
+    "config": {
+        "embedder_configs": [
+            {
+                "name": "tfidf",
+                "type": "TFIDFEmbedder",
+                "config": {
+                    "max_features": 1000,
+                    "ngram_range": [
+                        1,
+                        2
+                    ],
+                    "chinese_tokenizer": "spacy",
+                    "stop_words": null
+                }
+            },
+            {
+                "name": "topic",
+                "type": "TopicEmbedder",
+                "config": {
+                    "n_topics": 30,
+                    "method": "lda",
+                    "language": "chinese"
+                }
+            }
+        ],
+        "fusion_method": "concat",
+        "normalize": true
+    }
+}

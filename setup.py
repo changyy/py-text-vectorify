@@ -48,6 +48,8 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "numpy>=1.21.0",
+        "scikit-learn>=1.0.0",  # Required for TF-IDF and Topic embedders
+        "spacy>=3.4.0",         # Chinese tokenizer (actively maintained)
     ],
     extras_require={
         "openai": ["openai>=1.0.0"],
@@ -55,6 +57,12 @@ setup(
             "sentence-transformers>=2.0.0", 
             "transformers>=4.0.0", 
             "torch>=1.9.0"
+        ],
+        "advanced": [
+            "bertopic>=0.14.0",     # For advanced topic modeling
+            "jieba>=0.42.0",        # Alternative Chinese tokenizer (lightweight)
+            "pkuseg>=0.0.25",       # Alternative Chinese tokenizer
+            "umap-learn>=0.5.0",    # For advanced clustering
         ],
         "dev": [
             "pytest>=6.0.0",
@@ -69,6 +77,10 @@ setup(
             "sentence-transformers>=2.0.0", 
             "transformers>=4.0.0", 
             "torch>=1.9.0",
+            "bertopic>=0.14.0",
+            "jieba>=0.42.0",        # Alternative Chinese tokenizer
+            "pkuseg>=0.0.25",       # Alternative Chinese tokenizer
+            "umap-learn>=0.5.0",
         ],
     },
     entry_points={

@@ -1,0 +1,38 @@
+{
+    "embedder_type": "MultiLayerEmbedder",
+    "config": {
+        "embedder_configs": [
+            {
+                "name": "tfidf_spacy",
+                "type": "TFIDFEmbedder",
+                "config": {
+                    "max_features": 1500,
+                    "ngram_range": [
+                        1,
+                        2
+                    ],
+                    "chinese_tokenizer": "spacy",
+                    "stop_words": "chinese"
+                }
+            },
+            {
+                "name": "semantic_zh",
+                "type": "BGEEmbedder",
+                "config": {
+                    "model_name": "BAAI/bge-base-zh-v1.5"
+                }
+            },
+            {
+                "name": "topic_modeling",
+                "type": "TopicEmbedder",
+                "config": {
+                    "n_topics": 20,
+                    "method": "lda",
+                    "language": "chinese"
+                }
+            }
+        ],
+        "fusion_method": "concat",
+        "normalize": true
+    }
+}

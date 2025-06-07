@@ -1,8 +1,6 @@
 # text-vectorify
 
 [![PyPI version](https://img.shields.io/pypi/v/text-vectorify.svg)](https://pypi.org/project/text-vectorify)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI Downloads](https://static.pepy.tech/badge/text-vectorify)](https://pepy.tech/projects/text-vectorify)
 
 A powerful and flexible Python tool for text vectorization with multiple embedding models and intelligent caching.
@@ -32,7 +30,10 @@ cat data.jsonl | text-vectorify \
 
 ## ✨ Features
 
-- **🎯 Multiple Embedding Models**: OpenAI, SentenceBERT, BGE, M3E, HuggingFace
+- **🎯 Multiple Embedding Models**: OpenAI, SentenceBERT, BGE, M3E, HuggingFace, TF-IDF, Topic Models
+- **🌟 Multi-layer Vectorization**: Combine different embedding types with 3 fusion methods
+- **🔤 Chinese Text Support**: Intelligent Chinese tokenization (jieba, spaCy, pkuseg)
+- **📊 Topic Modeling**: LDA and BERTopic support for semantic topic analysis
 - **🚄 Intelligent Caching**: Avoid recomputing embeddings for duplicate texts
 - **📊 Flexible Field Combination**: Combine multiple JSON fields for embedding
 - **📁 JSONL Processing**: Seamless input/output in JSONL format
@@ -59,18 +60,24 @@ cat data.jsonl | text-vectorify \
 ### Method 1: pip install (Recommended)
 
 ```bash
-# Install core package only
+# Install core package (includes TF-IDF, Topic, and Multi-layer embedders)
 pip install text-vectorify
 
-# Install with specific embedder support
-pip install text-vectorify[openai]              # OpenAI support
-pip install text-vectorify[sentence-transformers] # SentenceBERT, BGE, M3E support
-pip install text-vectorify[huggingface]         # HuggingFace support
-pip install text-vectorify[all]                 # All embedding models
+# Install with specific advanced embedder support
+pip install text-vectorify[openai]        # OpenAI support
+pip install text-vectorify[transformers]  # SentenceBERT, BGE, M3E support
+pip install text-vectorify[advanced]      # BERTopic, advanced tokenizers
+pip install text-vectorify[all]           # All embedding models
 
 # Install with development dependencies
 pip install text-vectorify[dev]
 ```
+
+**🆕 Core Features Included by Default:**
+- ✅ **TF-IDF Embedder** with Chinese tokenization (spacy)
+- ✅ **Topic Embedder** with LDA support
+- ✅ **Multi-layer Embedder** with 3 fusion methods
+- ✅ **Smart caching** and **CLI tools**
 
 ### Method 2: From source
 
@@ -116,6 +123,9 @@ python test_runner.py --quick
 Install additional packages based on the embedding models you plan to use:
 
 ```bash
+# For Chinese text processing (recommended - included by default)
+python -m spacy download zh_core_web_sm
+
 # For OpenAI embeddings
 pip install openai
 
@@ -124,7 +134,51 @@ pip install sentence-transformers
 
 # For HuggingFace models
 pip install transformers torch
+
+# For alternative Chinese tokenizers (optional)
+pip install text-vectorify[advanced]  # Includes jieba and pkuseg
 ```
+
+### 🔤 Chinese Tokenization Setup
+
+This package uses **spaCy as the default and recommended Chinese tokenizer** for superior accuracy and modern NLP features. Alternative tokenizers are available for specific use cases.
+
+#### spaCy (Recommended - Default) 🌟
+```bash
+# Install spaCy Chinese model (required for Chinese text processing)
+python -m spacy download zh_core_web_sm
+
+# Usage in CLI (default - no need to specify tokenizer)
+text-vectorify --process-method "TFIDFEmbedder" --input data.jsonl
+
+# Explicit usage (optional)
+text-vectorify --process-method "TFIDFEmbedder" --chinese-tokenizer spacy --input data.jsonl
+```
+
+**Why spaCy?**
+- 🔄 Actively maintained with regular updates
+- 🎯 Superior accuracy for modern Chinese text
+- 🛠️ Rich linguistic features (POS tagging, NER, etc.)
+- 📚 Comprehensive language model support
+
+#### Alternative Tokenizers
+
+**jieba** (Lightweight option)
+```bash
+# Install alternative tokenizers
+pip install text-vectorify[advanced]
+
+# Usage
+text-vectorify --process-method "TFIDFEmbedder" --chinese-tokenizer jieba --input data.jsonl
+```
+
+**pkuseg** (Academic option)
+```bash
+# Already included in advanced extras
+text-vectorify --process-method "TFIDFEmbedder" --chinese-tokenizer pkuseg --input data.jsonl
+```
+
+**Automatic Selection Priority:** spaCy → jieba → pkuseg
 
 ## 📝 Usage
 
@@ -192,33 +246,78 @@ JSONL file with added vector embeddings:
 
 ## 🤖 Supported Models
 
-### OpenAI Embeddings
+### Core Embedders (Included by Default)
+
+#### TF-IDF Embedder
+- **Method**: `TFIDFEmbedder`
+- **Default Features**: 50 dimensions
+- **Chinese Support**: Uses spaCy tokenization by default (alternative: jieba, pkuseg)
+- **Customizable**: `max_features`, `min_df`, `max_df` parameters
+- **Cache**: Full sklearn vectorizer caching
+
+#### Topic Embedder  
+- **Method**: `TopicEmbedder`
+- **Default Topics**: 10 topics (LDA)
+- **Algorithms**: LDA (default), BERTopic (with advanced install)
+- **Dimensions**: n_topics + 6 (topic distribution + metadata)
+- **Custom Config**: `--process-extra-data "n_topics=20,method=lda"`
+
+#### Multi-layer Embedder
+- **Method**: `MultiLayerEmbedder`
+- **Fusion Methods**: concatenate (default), average, weighted
+- **Layer Combinations**: Any combination of available embedders
+- **Config Support**: JSON config files for complex setups
+- **Dimensions**: Varies by fusion method and layers
+
+### Advanced Embedders (Optional Install)
+
+#### OpenAI Embeddings
 - **Default Model**: `text-embedding-3-small`
 - **Other Models**: `text-embedding-3-large`
 - **API Key**: Required via `--process-extra-data`
 - **Dimensions**: 1536 (small), 3072 (large)
+- **Install**: `pip install text-vectorify[openai]`
 
-### SentenceBERT
+#### SentenceBERT
 - **Default Model**: `paraphrase-multilingual-MiniLM-L12-v2`
 - **Language**: Multilingual support
 - **Dimensions**: 384
+- **Install**: `pip install text-vectorify[transformers]`
 
-### BGE (Beijing Academy of AI)
+#### BGE (Beijing Academy of AI)
 - **Default Model**: `BAAI/bge-small-en-v1.5`
 - **Other Models**: `BAAI/bge-base-zh-v1.5`, `BAAI/bge-small-zh-v1.5`
 - **Language**: Optimized for Chinese and English
 - **Dimensions**: 512 (small), 768 (base)
+- **Install**: `pip install text-vectorify[transformers]`
 
-### M3E (Moka Massive Mixed Embedding)
+#### M3E (Moka Massive Mixed Embedding)
 - **Default Model**: `moka-ai/m3e-base`
 - **Other Models**: `moka-ai/m3e-small`
 - **Language**: Chinese specialized
 - **Dimensions**: 768 (base), 512 (small)
+- **Install**: `pip install text-vectorify[transformers]`
 
-### HuggingFace Transformers
+#### HuggingFace Transformers
 - **Default Model**: `sentence-transformers/all-MiniLM-L6-v2`
 - **Flexibility**: Custom model selection
 - **Dimensions**: Model-dependent
+- **Install**: `pip install text-vectorify[transformers]`
+
+### 🔧 Quick Model Selection Guide
+
+```bash
+# Core models (no extra install needed)
+--process-method "TFIDFEmbedder"           # Fast, traditional, good baseline
+--process-method "TopicEmbedder"           # Semantic topics, interpretable  
+--process-method "MultiLayerEmbedder"      # Rich, combined representations
+
+# Advanced models (require optional dependencies)
+--process-method "BGEEmbedder"             # Best for Chinese/English
+--process-method "SentenceBertEmbedder"    # Multilingual, balanced
+--process-method "OpenAIEmbedder"          # High quality, requires API key
+--process-method "HuggingFaceEmbedder"     # Most flexible, custom models
+```
 
 ## 📚 Examples
 
@@ -282,6 +381,109 @@ echo '{"title": "Sample", "content": "Text content"}' | text-vectorify \
 cat data.jsonl | text-vectorify \
   --input-field-main "title" \
   --process-method "BGEEmbedder"
+```
+
+### Example 7: TF-IDF Embeddings (included by default)
+
+```bash
+# TF-IDF with Chinese tokenization (spacy is the default)
+text-vectorify \
+  --input chinese_articles.jsonl \
+  --input-field-main "title,content" \
+  --process-method "TFIDFEmbedder" \
+  --max-features 1500
+
+# Use alternative tokenizer if needed (default is spacy)
+text-vectorify \
+  --input chinese_articles.jsonl \
+  --input-field-main "title,content" \
+  --process-method "TFIDFEmbedder" \
+  --chinese-tokenizer jieba \
+  --max-features 1500
+```
+
+### Example 8: Topic Embeddings with LDA
+
+```bash
+# Generate topic-based embeddings
+text-vectorify \
+  --input documents.jsonl \
+  --input-field-main "content" \
+  --process-method "TopicEmbedder" \
+  --n-topics 20
+```
+
+### Example 9: Multi-layer Vectorization with Config File
+
+First, create a config file `multi_config.json`:
+```json
+{
+  "fusion_method": "concatenate",
+  "layers": [
+    {
+      "embedder_type": "TFIDFEmbedder",
+      "config": {
+        "tokenizer": "chinese",
+        "max_features": 1000
+      }
+    },
+    {
+      "embedder_type": "TopicEmbedder", 
+      "config": {
+        "n_topics": 10,
+        "method": "lda"
+      }
+    }
+  ]
+}
+```
+
+Then run:
+```bash
+# Use config file for complex multi-layer setup
+text-vectorify \
+  --input documents.jsonl \
+  --input-field-main "content" \
+  --process-method "MultiLayerEmbedder" \
+  --config-file multi_config.json
+```
+
+### Example 10: Multi-layer with Direct Parameters
+
+```bash
+# Multi-layer with weighted fusion (uses default layers)
+text-vectorify \
+  --input mixed_docs.jsonl \
+  --input-field-main "title,content" \
+  --process-method "MultiLayerEmbedder" \
+  --fusion-method weighted
+```
+
+### Example 11: Cache Management
+
+```bash
+# Show cache statistics
+text-vectorify --show-cache-stats
+
+# List cached files
+text-vectorify --list-cache-files
+
+# Use custom cache directory
+text-vectorify \
+  --input data.jsonl \
+  --input-field-main "title" \
+  --process-method "TFIDFEmbedder" \
+  --cache-dir "./my_project_cache"
+
+# Clear specific cache before processing
+text-vectorify \
+  --input data.jsonl \
+  --input-field-main "title" \
+  --process-method "TFIDFEmbedder" \
+  --clear-cache
+
+# Clear all caches (with confirmation)
+text-vectorify --clear-all-caches
 ```
 
 ### 🎯 CLI-First Development Workflow
@@ -423,20 +625,14 @@ def process_documents_batch(documents: List[Dict],
     results = []
     for doc in documents:
         # Extract and combine text fields
-        text_parts = []
-        for field in ['title', 'content', 'description']:
-            if field in doc:
-                text_parts.append(str(doc[field]))
-        
-        combined_text = " ".join(text_parts)
+        text = " ".join(str(doc[field]) for field in ['title', 'content', 'description'] if field in doc)
         
         # Generate embedding with automatic caching
-        vector = embedder.encode(combined_text)
+        vector = embedder.encode(text)
         
         # Create result with original data + embedding
         result = doc.copy()
         result['embedding'] = vector
-        result['text_combined'] = combined_text
         results.append(result)
     
     return results
@@ -675,6 +871,289 @@ def process_dataframe_with_embeddings(df: pd.DataFrame,
     return df
 ```
 
+### 🌟 Multi-layer Vectorization Examples
+
+The multi-layer embedder allows you to combine different embedding techniques for richer text representations. Here are comprehensive examples:
+
+#### Basic Multi-layer Usage
+
+```python
+from text_vectorify import EmbedderFactory
+
+# Create multi-layer embedder with concatenation fusion
+multi_embedder = EmbedderFactory.create_embedder(
+    "MultiLayerEmbedder",
+    extra_data="fusion_method=concatenate,layer1=TFIDFEmbedder,layer2=TopicEmbedder"
+)
+
+# Process text
+text = "Machine learning algorithms in natural language processing applications"
+fused_vector = multi_embedder.encode(text)
+
+print(f"Fused vector dimensions: {len(fused_vector)}")
+# Output: Fused vector dimensions: 66 (TF-IDF: 50 + Topic: 16)
+```
+
+#### Advanced Multi-layer with Configuration
+
+```python
+import json
+from text_vectorify import EmbedderFactory
+
+# Create configuration for complex multi-layer setup
+config = {
+    "fusion_method": "concatenate",
+    "layers": [
+        {
+            "embedder_type": "TFIDFEmbedder",
+            "config": {
+                "tokenizer": "chinese",
+                "max_features": 1000,
+                "min_df": 2,
+                "max_df": 0.8
+            }
+        },
+        {
+            "embedder_type": "TopicEmbedder",
+            "config": {
+                "n_topics": 20,
+                "method": "lda",
+                "random_state": 42
+            }
+        }
+    ]
+}
+
+# Save config to file
+with open("advanced_multi_config.json", "w") as f:
+    json.dump(config, f, indent=2)
+
+# Create embedder using config file
+multi_embedder = EmbedderFactory.create_embedder(
+    "MultiLayerEmbedder",
+    model_name="advanced_multi_config.json"
+)
+
+# Process documents
+documents = [
+    "人工智能技术在自然语言处理中的应用",
+    "机器学习算法的最新发展趋势",
+    "深度学习模型在文本分析中的表现"
+]
+
+embeddings = []
+for doc in documents:
+    vector = multi_embedder.encode(doc)
+    embeddings.append(vector)
+    print(f"Document: {doc[:30]}... -> Vector dim: {len(vector)}")
+```
+
+#### Multi-layer with Different Fusion Methods
+
+```python
+from text_vectorify import EmbedderFactory
+
+# Test different fusion methods
+fusion_methods = ["concatenate", "average", "weighted"]
+text = "Advanced machine learning techniques for text analysis"
+
+for method in fusion_methods:
+    embedder = EmbedderFactory.create_embedder(
+        "MultiLayerEmbedder",
+        extra_data=f"fusion_method={method},layer1=TFIDFEmbedder,layer2=TopicEmbedder"
+    )
+    
+    vector = embedder.encode(text)
+    print(f"{method.capitalize()} fusion: {len(vector)} dimensions")
+
+# Output:
+# Concatenate fusion: 66 dimensions
+# Average fusion: 50 dimensions (max of layer dimensions)
+# Weighted fusion: 50 dimensions (max of layer dimensions)
+```
+
+#### Multi-layer Processing Pipeline
+
+```python
+from text_vectorify import EmbedderFactory
+from typing import List, Dict
+import numpy as np
+
+class MultiLayerDocumentProcessor:
+    """Advanced document processor using multi-layer embeddings."""
+    
+    def __init__(self, config_path: str = None, cache_dir: str = "./multi_cache"):
+        if config_path:
+            self.embedder = EmbedderFactory.create_embedder(
+                "MultiLayerEmbedder",
+                model_name=config_path,
+                cache_dir=cache_dir
+            )
+        else:
+            # Default configuration
+            self.embedder = EmbedderFactory.create_embedder(
+                "MultiLayerEmbedder",
+                extra_data="fusion_method=concatenate,layer1=TFIDFEmbedder,layer2=TopicEmbedder",
+                cache_dir=cache_dir
+            )
+    
+    def process_documents(self, documents: List[Dict]) -> List[Dict]:
+        """Process documents with multi-layer embeddings."""
+        results = []
+        
+        for doc in documents:
+            # Combine text fields
+            text_parts = []
+            for field in ['title', 'content', 'description', 'tags']:
+                if field in doc and doc[field]:
+                    text_parts.append(str(doc[field]))
+            
+            combined_text = " ".join(text_parts)
+            
+            # Generate multi-layer embedding
+            embedding = self.embedder.encode(combined_text)
+            
+            # Add to result
+            result = doc.copy()
+            result['embedding'] = embedding
+            result['embedding_dim'] = len(embedding)
+            result['text_combined'] = combined_text
+            results.append(result)
+        
+        return results
+    
+    def calculate_similarities(self, documents: List[Dict], 
+                             query_text: str) -> List[tuple]:
+        """Calculate similarities between query and documents."""
+        query_embedding = self.embedder.encode(query_text)
+        
+        similarities = []
+        for i, doc in enumerate(documents):
+            if 'embedding' in doc:
+                similarity = self._cosine_similarity(query_embedding, doc['embedding'])
+                similarities.append((i, similarity))
+        
+        # Sort by similarity (descending)
+        similarities.sort(key=lambda x: x[1], reverse=True)
+        return similarities
+    
+    def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
+        """Calculate cosine similarity."""
+        a_np = np.array(a)
+        b_np = np.array(b)
+        return np.dot(a_np, b_np) / (np.linalg.norm(a_np) * np.linalg.norm(b_np))
+
+# Usage example
+processor = MultiLayerDocumentProcessor()
+
+documents = [
+    {
+        "title": "Machine Learning Basics", 
+        "content": "Introduction to ML algorithms and concepts",
+        "tags": "AI, ML, algorithms"
+    },
+    {
+        "title": "Deep Learning Networks",
+        "content": "Neural networks and deep learning architectures", 
+        "tags": "DL, neural networks, AI"
+    }
+]
+
+# Process documents
+processed_docs = processor.process_documents(documents)
+
+# Find similar documents
+query = "artificial intelligence algorithms"
+similarities = processor.calculate_similarities(processed_docs, query)
+
+print("Document similarities:")
+for doc_idx, similarity in similarities:
+    title = processed_docs[doc_idx]['title']
+    print(f"  {title}: {similarity:.4f}")
+```
+
+#### Batch Multi-layer Processing
+
+```python
+from text_vectorify import EmbedderFactory
+import json
+from pathlib import Path
+
+def batch_multi_layer_processing(input_file: str, 
+                                config_file: str,
+                                output_file: str,
+                                batch_size: int = 100):
+    """
+    Process large datasets with multi-layer embeddings in batches.
+    
+    Args:
+        input_file: Path to input JSONL file
+        config_file: Path to configuration file
+        output_file: Path to output JSONL file
+        batch_size: Number of records per batch
+    """
+    
+    # Create multi-layer embedder
+    embedder = EmbedderFactory.create_embedder(
+        "MultiLayerEmbedder",
+        model_name=config_file,
+        cache_dir="./batch_multi_cache"
+    )
+    
+    # Process in batches
+    batch = []
+    processed_count = 0
+    
+    with open(input_file, 'r', encoding='utf-8') as infile:
+        with open(output_file, 'w', encoding='utf-8') as outfile:
+            
+            for line in infile:
+                item = json.loads(line.strip())
+                batch.append(item)
+                
+                if len(batch) >= batch_size:
+                    # Process batch
+                    for item in batch:
+                        # Combine text fields
+                        text = f"{item.get('title', '')} {item.get('content', '')}"
+                        
+                        # Generate multi-layer embedding
+                        embedding = embedder.encode(text)
+                        
+                        # Add embedding to item
+                        item['embedding'] = embedding
+                        item['embedding_dim'] = len(embedding)
+                        
+                        # Write to output
+                        outfile.write(json.dumps(item, ensure_ascii=False) + '\n')
+                    
+                    processed_count += len(batch)
+                    batch = []
+                    print(f"Processed {processed_count} documents")
+            
+            # Process remaining items
+            if batch:
+                for item in batch:
+                    text = f"{item.get('title', '')} {item.get('content', '')}"
+                    embedding = embedder.encode(text)
+                    item['embedding'] = embedding
+                    item['embedding_dim'] = len(embedding)
+                    outfile.write(json.dumps(item, ensure_ascii=False) + '\n')
+                
+                processed_count += len(batch)
+    
+    print(f"Total processed: {processed_count} documents")
+    print(f"Output saved to: {output_file}")
+
+# Usage
+batch_multi_layer_processing(
+    input_file="large_dataset.jsonl",
+    config_file="configs/multi_layer_simple.json", 
+    output_file="processed_with_multilayer.jsonl",
+    batch_size=50
+)
+```
+
 ### 🔍 Performance Optimization
 
 #### Cache Management Best Practices
@@ -824,28 +1303,166 @@ print(embedders)
 
 ## ⚙️ Configuration
 
+### 📁 Pre-built Configuration Files
+
+The `configs/` directory provides ready-to-use configuration files for various scenarios:
+
+#### Single Embedder Configurations
+- **`tfidf_spacy_example.json`** - TF-IDF with spaCy tokenization (recommended for accuracy)
+- **`tfidf_jieba_example.json`** - TF-IDF with jieba tokenization (lightweight option)
+- **`tfidf_pkuseg_example.json`** - TF-IDF with pkuseg tokenization (domain-specific)
+
+#### Multi-Layer Configurations
+- **`multi_layer_spacy_recommended.json`** - Recommended multi-layer setup (TF-IDF + BGE + Topic)
+- **`multi_layer_jieba_lightweight.json`** - Lightweight multi-layer (TF-IDF + M3E)
+- **`multi_layer_simple.json`** - Basic multi-layer configuration
+- **`multi_layer_advanced_research.json`** - Advanced research configuration
+- **`multi_layer_1500_articles.json`** - Large-scale processing configuration
+
+#### Usage with Config Files
+```bash
+# Use pre-built configuration
+python -m text_vectorify --config configs/multi_layer_spacy_recommended.json --input data.jsonl
+
+# List available configurations
+ls configs/*.json
+```
+
+💡 **Tip: See [`configs/README.md`](configs/README.md) for detailed descriptions of each configuration file.**
+
+### Multi-layer Configuration Files
+
+Multi-layer embedder supports JSON configuration files for complex setups:
+
+#### Basic Configuration
+```json
+{
+  "fusion_method": "concatenate",
+  "layers": [
+    {
+      "embedder_type": "TFIDFEmbedder",
+      "config": {
+        "tokenizer": "chinese",
+        "max_features": 1000
+      }
+    },
+    {
+      "embedder_type": "TopicEmbedder",
+      "config": {
+        "n_topics": 10,
+        "method": "lda"
+      }
+    }
+  ]
+}
+```
+
+#### Advanced Configuration
+```json
+{
+  "fusion_method": "weighted",
+  "fusion_weights": [0.7, 0.3],
+  "layers": [
+    {
+      "embedder_type": "TFIDFEmbedder",
+      "config": {
+        "tokenizer": "chinese",
+        "max_features": 2000,
+        "min_df": 2,
+        "max_df": 0.8,
+        "use_idf": true,
+        "smooth_idf": false,
+        "sublinear_tf": true
+      }
+    },
+    {
+      "embedder_type": "TopicEmbedder",
+      "config": {
+        "n_topics": 20,
+        "method": "lda",
+        "random_state": 42,
+        "max_iter": 100,
+        "doc_topic_prior": 0.1,
+        "topic_word_prior": 0.01
+      }
+    }
+  ]
+}
+```
+
+#### Available Configuration Options
+
+**Fusion Methods:**
+- `concatenate`: Join vectors end-to-end (default)
+- `average`: Element-wise average of vectors
+- `weighted`: Weighted average (requires `fusion_weights`)
+
+**TFIDFEmbedder Config:**
+- `chinese_tokenizer`: "spacy", "jieba", "pkuseg" (default: "spacy")
+- `max_features`: Maximum number of features (default: 50)
+- `min_df`: Minimum document frequency (default: 1)
+- `max_df`: Maximum document frequency (default: 1.0)
+- `use_idf`: Use inverse document frequency (default: true)
+- `smooth_idf`: Smooth IDF weights (default: true)
+- `sublinear_tf`: Apply sublinear tf scaling (default: false)
+
+**TopicEmbedder Config:**
+- `n_topics`: Number of topics (default: 10)
+- `method`: "lda" or "bertopic" (default: "lda")
+- `random_state`: Random seed for reproducibility
+- `max_iter`: Maximum iterations for LDA (default: 20)
+- `doc_topic_prior`: Document-topic prior (alpha)
+- `topic_word_prior`: Topic-word prior (beta)
+
 ### Cache Management
 
 The tool automatically caches:
 - **Text embeddings**: Avoid recomputing identical texts
 - **Model files**: Download models once and reuse
+- **Layer embeddings**: Cache individual layer outputs
+- **Fused vectors**: Cache final multi-layer results
 - **Cache location**: Configurable via `--output-cache-dir`
 
 ### Cache Structure
 
 ```
 cache/
-├── models/                 # Downloaded models
+├── models/                          # Downloaded models
 │   ├── sentence_transformers/
 │   ├── huggingface/
 │   └── bge/
-└── [hash].pkl            # Cached embeddings
+├── TFIDFEmbedder_*.json           # TF-IDF cache
+├── TopicEmbedder_*.json           # Topic embedder cache  
+├── MultiLayerEmbedder_*.json      # Multi-layer cache
+└── layers/                         # Layer-specific caches
+    ├── tfidf/
+    ├── topic/
+    └── multi_layer/
+```
+
+### Cache Management Commands
+
+```bash
+# Show cache statistics
+text-vectorify --show-cache-stats
+
+# List cached files
+text-vectorify --list-cache-files
+
+# Use custom cache directory
+text-vectorify \
+  --input data.jsonl \
+  --input-field-main "title" \
+  --process-method "MultiLayerEmbedder" \
+  --output-cache-dir "./my_project_cache"
 ```
 
 ### Environment Variables
 
 ```bash
-export OPENAI_API_KEY="your-openai-api-key"  # For OpenAI embeddings
+export OPENAI_API_KEY="your-openai-api-key"        # For OpenAI embeddings
+export HUGGINGFACE_HUB_TOKEN="your-hf-token"       # For private HF models
+export TEXT_VECTORIFY_CACHE_DIR="./custom_cache"   # Default cache directory
 ```
 
 ## 🔍 Performance Tips

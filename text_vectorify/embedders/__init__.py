@@ -5,6 +5,9 @@ from .sentence_bert import SentenceBertEmbedder
 from .bge import BGEEmbedder
 from .m3e import M3EEmbedder
 from .huggingface import HuggingFaceEmbedder
+from .tfidf import TFIDFEmbedder
+from .topic import TopicEmbedder
+from .multi_layer import MultiLayerEmbedder
 
 __all__ = [
     "BaseEmbedder",
@@ -13,5 +16,8 @@ __all__ = [
     "SentenceBertEmbedder",
     "BGEEmbedder",
     "M3EEmbedder",
-    "HuggingFaceEmbedder"
+    "HuggingFaceEmbedder",
+    "TFIDFEmbedder",
+    "TopicEmbedder",
+    "MultiLayerEmbedder"
 ]

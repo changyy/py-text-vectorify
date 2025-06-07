@@ -1,0 +1,39 @@
+{
+    "layers": [
+        {
+            "name": "tfidf",
+            "type": "TFIDFEmbedder",
+            "config": {
+                "max_features": 1000,
+                "ngram_range": [
+                    1,
+                    2
+                ],
+                "stop_words": null
+            },
+            "weight": 0.3
+        },
+        {
+            "name": "semantic",
+            "type": "BGEEmbedder",
+            "config": {
+                "model_name": "BAAI/bge-base-zh-v1.5"
+            },
+            "weight": 0.5
+        },
+        {
+            "name": "topic",
+            "type": "TopicEmbedder",
+            "config": {
+                "n_topics": 30,
+                "method": "bertopic",
+                "language": "chinese"
+            },
+            "weight": 0.2
+        }
+    ],
+    "fusion": {
+        "method": "weighted",
+        "normalize": true
+    }
+}

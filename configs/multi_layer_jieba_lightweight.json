@@ -1,0 +1,29 @@
+{
+    "embedder_type": "MultiLayerEmbedder",
+    "config": {
+        "embedder_configs": [
+            {
+                "name": "tfidf_jieba",
+                "type": "TFIDFEmbedder",
+                "config": {
+                    "max_features": 1200,
+                    "ngram_range": [
+                        1,
+                        2
+                    ],
+                    "chinese_tokenizer": "jieba",
+                    "stop_words": null
+                }
+            },
+            {
+                "name": "semantic_m3e",
+                "type": "M3EEmbedder",
+                "config": {
+                    "model_name": "moka-ai/m3e-small"
+                }
+            }
+        ],
+        "fusion_method": "weighted_avg",
+        "normalize": false
+    }
+}

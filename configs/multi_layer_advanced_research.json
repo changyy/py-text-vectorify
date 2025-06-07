@@ -1,0 +1,42 @@
+{
+    "embedder_type": "MultiLayerEmbedder",
+    "config": {
+        "embedder_configs": [
+            {
+                "name": "tfidf_spacy_advanced",
+                "type": "TFIDFEmbedder",
+                "config": {
+                    "max_features": 8000,
+                    "ngram_range": [
+                        1,
+                        4
+                    ],
+                    "chinese_tokenizer": "spacy",
+                    "stop_words": "chinese",
+                    "min_df": 3,
+                    "max_df": 0.85,
+                    "sublinear_tf": true,
+                    "use_idf": true
+                }
+            },
+            {
+                "name": "semantic_bge_large",
+                "type": "BGEEmbedder",
+                "config": {
+                    "model_name": "BAAI/bge-large-zh-v1.5"
+                }
+            },
+            {
+                "name": "topic_bertopic",
+                "type": "TopicEmbedder",
+                "config": {
+                    "n_topics": 100,
+                    "method": "bertopic",
+                    "language": "chinese"
+                }
+            }
+        ],
+        "fusion_method": "attention_weighted",
+        "normalize": true
+    }
+}

@@ -77,6 +77,18 @@ Examples:
   # Basic usage with file input
   text-vectorify --input data.jsonl --input-field-main "title" --process-method "BGEEmbedder"
   
+  # TF-IDF embedder with Chinese support
+  text-vectorify --input data.jsonl --input-field-main "title" --process-method "TFIDFEmbedder" --chinese-tokenizer spacy --max-features 1500
+  
+  # Topic modeling embedder
+  text-vectorify --input data.jsonl --input-field-main "title" --process-method "TopicEmbedder" --n-topics 20
+  
+  # Multi-layer embedder with config file
+  text-vectorify --input data.jsonl --input-field-main "title" --process-method "MultiLayerEmbedder" --config-file configs/multi_layer_example.json
+  
+  # Multi-layer embedder with parameters
+  text-vectorify --input data.jsonl --input-field-main "title" --process-method "MultiLayerEmbedder" --fusion-method weighted
+  
   # With custom output filename
   text-vectorify --input data.jsonl --input-field-main "title" --process-method "BGEEmbedder" --output results.jsonl
   
@@ -105,12 +117,32 @@ Examples:
     parser.add_argument('--input-field-subtitle', 
                        help='Optional subtitle field name to combine with main field')
     parser.add_argument('--process-method',
-                       choices=['OpenAIEmbedder', 'SentenceBertEmbedder', 'BGEEmbedder', 'M3EEmbedder', 'HuggingFaceEmbedder'],
+                       choices=['OpenAIEmbedder', 'SentenceBertEmbedder', 'BGEEmbedder', 'M3EEmbedder', 'HuggingFaceEmbedder', 'TFIDFEmbedder', 'TopicEmbedder', 'MultiLayerEmbedder'],
                        help='Embedding method to use')
     parser.add_argument('--model-name',
                        help='Custom model name (overrides default for chosen method)')
     parser.add_argument('--cache-dir',
                        help='Custom cache directory path', default='./cache')
+    
+    # Multi-layer embedder specific arguments
+    parser.add_argument('--config-file',
+                       help='JSON config file path for MultiLayerEmbedder')
+    parser.add_argument('--fusion-method',
+                       choices=['concat', 'weighted', 'attention'],
+                       help='Fusion method for MultiLayerEmbedder (default: concat)', 
+                       default='concat')
+    parser.add_argument('--max-features',
+                       type=int,
+                       help='Maximum features for TFIDFEmbedder (default: 1000)',
+                       default=1000)
+    parser.add_argument('--n-topics',
+                       type=int,
+                       help='Number of topics for TopicEmbedder (default: 30)',
+                       default=30)
+    parser.add_argument('--chinese-tokenizer',
+                       choices=['spacy', 'jieba', 'pkuseg'],
+                       help='Chinese tokenizer for TFIDFEmbedder (default: spacy)',
+                       default='spacy')
     parser.add_argument('--clear-cache', action='store_true',
                        help='Clear cache for the selected algorithm before processing')
     parser.add_argument('--clear-all-caches', action='store_true',
@@ -337,6 +369,72 @@ def main():
         print(f"🤖 Using custom model: {args.model_name}", file=sys.stderr)
     else:
         print(f"🤖 Using default model for {args.process_method}", file=sys.stderr)
+    
+    # Handle method-specific parameters
+    if args.process_method == "TFIDFEmbedder":
+        embedder_params['max_features'] = args.max_features
+        embedder_params['chinese_tokenizer'] = args.chinese_tokenizer
+        print(f"🔧 TF-IDF settings: max_features={args.max_features}, tokenizer={args.chinese_tokenizer}", file=sys.stderr)
+    
+    elif args.process_method == "TopicEmbedder":
+        embedder_params['n_topics'] = args.n_topics
+        embedder_params['method'] = 'lda'  # Default to LDA for CLI
+        embedder_params['language'] = 'chinese'
+        print(f"🔧 Topic model settings: n_topics={args.n_topics}, method=lda", file=sys.stderr)
+    
+    elif args.process_method == "MultiLayerEmbedder":
+        if args.config_file:
+            # Load from config file
+            try:
+                import json
+                with open(args.config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                
+                # Handle different config file formats
+                if 'embedder_type' in config:
+                    # Format: {"embedder_type": "MultiLayerEmbedder", "config": {...}}
+                    embedder_params.update(config['config'])
+                elif 'layers' in config:
+                    # Format: {"layers": [...], "fusion": {...}}
+                    embedder_configs = config['layers']
+                    fusion_config = config.get('fusion', {})
+                    embedder_params['embedder_configs'] = embedder_configs
+                    embedder_params['fusion_method'] = fusion_config.get('method', args.fusion_method)
+                    embedder_params['normalize'] = fusion_config.get('normalize', True)
+                else:
+                    print(f"❌ Invalid config file format", file=sys.stderr)
+                    sys.exit(1)
+                
+                print(f"🔧 Using config file: {args.config_file}", file=sys.stderr)
+            except Exception as e:
+                print(f"❌ Error loading config file: {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            # Use default multi-layer configuration
+            embedder_configs = [
+                {
+                    'name': 'tfidf_layer',
+                    'type': 'TFIDFEmbedder',
+                    'config': {
+                        'max_features': args.max_features,
+                        'chinese_tokenizer': args.chinese_tokenizer,
+                        'ngram_range': (1, 2)
+                    }
+                },
+                {
+                    'name': 'topic_layer',
+                    'type': 'TopicEmbedder',
+                    'config': {
+                        'n_topics': args.n_topics,
+                        'method': 'lda',
+                        'language': 'chinese'
+                    }
+                }
+            ]
+            embedder_params['embedder_configs'] = embedder_configs
+            embedder_params['fusion_method'] = args.fusion_method
+            embedder_params['normalize'] = True
+            print(f"🔧 Multi-layer settings: fusion={args.fusion_method}, layers=TF-IDF+Topic", file=sys.stderr)
     
     # Handle extra data (like API keys)
     if args.extra_data:
